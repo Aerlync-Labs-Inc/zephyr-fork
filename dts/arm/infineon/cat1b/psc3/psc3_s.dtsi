@@ -1,9 +1,8 @@
 /*
- * copyright (c) (2016-2025), Cypress Semiconductor Corporation
- * (an Infineon company) or an affiliate of Cypress Semiconductor Corporation.
+ * Copyright (c) 2025 Infineon Technologies AG,
+ * or an affiliate of Infineon Technologies AG.
  *
  * SPDX-License-Identifier: Apache-2.0
- *
  */
 
 #include <mem.h>
@@ -17,7 +16,7 @@
 
 	soc {
 		pinctrl: pinctrl@52400000 {
-			compatible = "infineon,cat1-pinctrl";
+			compatible = "infineon,catx-pinctrl";
 			reg = <0x52400000 0x20000>;
 		};
 
@@ -215,7 +214,7 @@
 			status = "disabled";
 		};
 
-		tcpwm0: tcpwm0@52a00000  {
+		tcpwm0: tcpwm0@52a00000 {
 			reg = <0x52a00000 0x10000>;
 			#address-cells = <1>;
 			#size-cells = <1>;
@@ -297,7 +296,7 @@
 			};
 		};
 
-		tcpwm1: tcpwm1@52a10000  {
+		tcpwm1: tcpwm1@52a10000 {
 			reg = <0x52a10000 0x10000>;
 			#address-cells = <1>;
 			#size-cells = <1>;
@@ -455,7 +454,7 @@
 			};
 		};
 
-		tcpwm2: tcpwm2@52a20000  {
+		tcpwm2: tcpwm2@52a20000 {
 			reg = <0x52a20000 0x10000>;
 			#address-cells = <1>;
 			#size-cells = <1>;
