@@ -24,7 +24,7 @@
 #include <cy_syslib.h>
 #include <cy_sysint.h>
 
-#include <zephyr/drivers/clock_control/clock_control_ifx_cat1.h>
+#include <zephyr/drivers/clock_control/clock_control_ifx_catx.h>
 #include <zephyr/dt-bindings/clock/ifx_clock_source_common.h>
 
 #include <zephyr/logging/log.h>
@@ -37,8 +37,8 @@ LOG_MODULE_REGISTER(uart_ifx_cat1, CONFIG_UART_LOG_LEVEL);
 /* Data structure */
 struct ifx_cat1_uart_data {
 	struct uart_config cfg;
-	struct ifx_cat1_resource_inst hw_resource;
-	struct ifx_cat1_clock clock;
+	struct ifx_catx_resource_inst hw_resource;
+	struct ifx_catx_clock clock;
 #if defined(COMPONENT_CAT1B) || defined(COMPONENT_CAT1C) || defined(CONFIG_SOC_FAMILY_INFINEON_EDGE)
 	uint8_t clock_peri_group;
 #endif
@@ -243,13 +243,13 @@ cy_rslt_t ifx_cat1_uart_set_baud(const struct device *dev, uint32_t baudrate)
 	divider = ((peri_frequency + ((baudrate * best_oversample) / 2)) /
 		   (baudrate * best_oversample));
 
-	en_clk_dst_t clk_idx = ifx_cat1_scb_get_clock_index(data->hw_resource.block_num);
+	en_clk_dst_t clk_idx = ifx_catx_scb_get_clock_index(data->hw_resource.block_num);
 
 	/* Set baud rate */
 	if ((data->clock.block & 0x02) == 0) {
-		status = ifx_cat1_utils_peri_pclk_set_divider(clk_idx, &(data->clock), divider - 1);
+		status = ifx_catx_utils_peri_pclk_set_divider(clk_idx, &(data->clock), divider - 1);
 	} else {
-		status = ifx_cat1_utils_peri_pclk_set_frac_divider(clk_idx, &(data->clock),
+		status = ifx_catx_utils_peri_pclk_set_frac_divider(clk_idx, &(data->clock),
 								   divider - 1, 0);
 	}
 
@@ -872,7 +872,7 @@ static DEVICE_API(uart, ifx_cat1_uart_driver_api) = {
 #define UART_PERI_CLOCK_INIT(n)                                                                    \
 	.clock =                                                                                   \
 		{                                                                                  \
-			.block = IFX_CAT1_PERIPHERAL_GROUP_ADJUST(                                 \
+			.block = IFX_CATX_PERIPHERAL_GROUP_ADJUST(                                 \
 				DT_PROP_BY_IDX(DT_INST_PHANDLE(n, clocks), peri_group, 0),         \
 				DT_PROP_BY_IDX(DT_INST_PHANDLE(n, clocks), peri_group, 1),         \
 				DT_INST_PROP_BY_PHANDLE(n, clocks, div_type)),                     \
@@ -883,7 +883,7 @@ static DEVICE_API(uart, ifx_cat1_uart_driver_api) = {
 #define UART_PERI_CLOCK_INIT(n)                                                                    \
 	.clock =                                                                                   \
 		{                                                                                  \
-			.block = IFX_CAT1_PERIPHERAL_GROUP_ADJUST(                                 \
+			.block = IFX_CATX_PERIPHERAL_GROUP_ADJUST(                                 \
 				DT_PROP_BY_IDX(DT_INST_PHANDLE(n, clocks), peri_group, 1),         \
 				DT_INST_PROP_BY_PHANDLE(n, clocks, div_type)),                     \
 			.channel = DT_INST_PROP_BY_PHANDLE(n, clocks, channel),                    \

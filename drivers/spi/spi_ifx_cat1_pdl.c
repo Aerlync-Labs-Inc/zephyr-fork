@@ -14,7 +14,7 @@ LOG_MODULE_REGISTER(cat1_spi, CONFIG_SPI_LOG_LEVEL);
 
 #include <zephyr/drivers/pinctrl.h>
 #include <zephyr/drivers/spi.h>
-#include <zephyr/drivers/clock_control/clock_control_ifx_cat1.h>
+#include <zephyr/drivers/clock_control/clock_control_ifx_catx.h>
 #include <zephyr/dt-bindings/clock/ifx_clock_source_common.h>
 #include <zephyr/kernel.h>
 
@@ -107,8 +107,8 @@ struct ifx_cat1_spi_data {
 	uint8_t clock_peri_group;
 #endif
 
-	struct ifx_cat1_resource_inst resource;
-	struct ifx_cat1_clock clock;
+	struct ifx_catx_resource_inst resource;
+	struct ifx_catx_clock clock;
 	cy_en_scb_spi_sclk_mode_t clk_mode;
 	uint8_t data_bits;
 	bool is_slave;
@@ -574,7 +574,7 @@ static int ifx_cat1_spi_init(const struct device *dev)
 #define SPI_PERI_CLOCK_INIT(n)                                                                     \
 	.clock =                                                                                   \
 		{                                                                                  \
-			.block = IFX_CAT1_PERIPHERAL_GROUP_ADJUST(                                 \
+			.block = IFX_CATX_PERIPHERAL_GROUP_ADJUST(                                 \
 				DT_PROP_BY_IDX(DT_INST_PHANDLE(n, clocks), peri_group, 0),         \
 				DT_PROP_BY_IDX(DT_INST_PHANDLE(n, clocks), peri_group, 1),         \
 				DT_INST_PROP_BY_PHANDLE(n, clocks, div_type)),                     \
@@ -585,7 +585,7 @@ static int ifx_cat1_spi_init(const struct device *dev)
 #define SPI_PERI_CLOCK_INIT(n)                                                                     \
 	.clock =                                                                                   \
 		{                                                                                  \
-			.block = IFX_CAT1_PERIPHERAL_GROUP_ADJUST(                                 \
+			.block = IFX_CATX_PERIPHERAL_GROUP_ADJUST(                                 \
 				DT_PROP_BY_IDX(DT_INST_PHANDLE(n, clocks), peri_group, 1),         \
 				DT_INST_PROP_BY_PHANDLE(n, clocks, div_type)),                     \
 			.channel = DT_INST_PROP_BY_PHANDLE(n, clocks, channel),                    \
@@ -910,7 +910,7 @@ static cy_rslt_t ifx_cat1_spi_int_frequency(const struct device *dev, uint32_t h
 		CY_UNUSED_PARAMETER(last_ovrsmpl_val);
 	}
 
-	en_clk_dst_t clk_idx = ifx_cat1_scb_get_clock_index(data->resource.block_num);
+	en_clk_dst_t clk_idx = ifx_catx_scb_get_clock_index(data->resource.block_num);
 
 	if ((data->clock.block & 0x02) == 0) {
 		result = ifx_cat1_utils_peri_pclk_set_divider(clk_idx, &(data->clock),

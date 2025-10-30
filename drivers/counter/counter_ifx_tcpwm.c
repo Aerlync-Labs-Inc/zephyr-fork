@@ -13,7 +13,7 @@
 #include <zephyr/drivers/pinctrl.h>
 #include <zephyr/drivers/timer/ifx_tcpwm.h>
 #include <zephyr/dt-bindings/pinctrl/ifx_cat1-pinctrl.h>
-#include <zephyr/drivers/clock_control/clock_control_ifx_cat1.h>
+#include <zephyr/drivers/clock_control/clock_control_ifx_catx.h>
 #include <zephyr/irq.h>
 
 #include <zephyr/logging/log.h>
@@ -44,7 +44,7 @@ struct ifx_tcpwm_counter_data {
 	struct counter_alarm_cfg alarm_cfg;
 	struct counter_top_cfg top_value_cfg_counter;
 	uint32_t guard_period;
-	struct ifx_cat1_clock clock;
+	struct ifx_catx_clock clock;
 	uint8_t clock_peri_group;
 };
 
@@ -460,12 +460,12 @@ static DEVICE_API(counter, counter_api) = {
 	static struct ifx_tcpwm_counter_data ifx_tcpwm_counter##n##_data = {                       \
 		.clock =                                                                           \
 			{                                                                          \
-				.block = IFX_CAT1_PERIPHERAL_GROUP_ADJUST(                         \
-					DT_PROP_BY_IDX(DT_INST_PHANDLE(n, clocks), clk_dst, 1),    \
+				.block = IFX_CATX_PERIPHERAL_GROUP_ADJUST(                         \
+					DT_PROP_BY_IDX(DT_INST_PHANDLE(n, clocks), peri_group, 1), \
 					DT_INST_PROP_BY_PHANDLE(n, clocks, div_type)),             \
-				.channel = DT_INST_PROP_BY_PHANDLE(n, clocks, div_num),            \
+				.channel = DT_INST_PROP_BY_PHANDLE(n, clocks, channel),            \
 			},                                                                         \
-		.clock_peri_group = DT_PROP_BY_IDX(DT_INST_PHANDLE(n, clocks), clk_dst, 1),        \
+		.clock_peri_group = DT_PROP_BY_IDX(DT_INST_PHANDLE(n, clocks), peri_group, 1),     \
 	};                                                                                         \
                                                                                                    \
 	static const struct ifx_tcpwm_counter_config ifx_tcpwm_counter##n##_config = {             \

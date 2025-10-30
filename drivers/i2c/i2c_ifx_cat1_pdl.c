@@ -13,7 +13,7 @@
 
 #include <zephyr/drivers/i2c.h>
 #include <zephyr/drivers/pinctrl.h>
-#include <zephyr/drivers/clock_control/clock_control_ifx_cat1.h>
+#include <zephyr/drivers/clock_control/clock_control_ifx_catx.h>
 #include <zephyr/dt-bindings/clock/ifx_clock_source_common.h>
 
 #include <zephyr/logging/log.h>
@@ -59,7 +59,7 @@ struct ifx_cat1_i2c_data {
 	struct k_sem transfer_sem;
 	bool error;
 	uint32_t async_pending;
-	struct ifx_cat1_clock clock;
+	struct ifx_catx_clock clock;
 #if defined(COMPONENT_CAT1B) || defined(COMPONENT_CAT1C) || defined(COMPONENT_CAT1D)
 	uint8_t clock_peri_group;
 #endif
@@ -419,9 +419,8 @@ static int ifx_cat1_i2c_msg_validate(struct i2c_msg *msg, uint8_t num_msgs)
 	return 0;
 }
 
-static int _i2c_master_transfer_async(const struct device *dev, uint16_t address,
-					    const void *tx, size_t tx_size, void *rx,
-					    size_t rx_size)
+static int _i2c_master_transfer_async(const struct device *dev, uint16_t address, const void *tx,
+				      size_t tx_size, void *rx, size_t rx_size)
 {
 	struct ifx_cat1_i2c_data *data = dev->data;
 	const struct ifx_cat1_i2c_config *const config = dev->config;
@@ -686,21 +685,23 @@ static const struct i2c_driver_api i2c_cat1_driver_api = {
 
 #if defined(COMPONENT_CAT1D)
 #define I2C_PERI_CLOCK_INIT(n)                                                                     \
-	.clock = {                                                                                 \
-		.block = IFX_CAT1_PERIPHERAL_GROUP_ADJUST(                                         \
-			DT_PROP_BY_IDX(DT_INST_PHANDLE(n, clocks), peri_group, 0),                 \
-			DT_PROP_BY_IDX(DT_INST_PHANDLE(n, clocks), peri_group, 1),                 \
-			DT_INST_PROP_BY_PHANDLE(n, clocks, div_type)),                             \
-		.channel = DT_INST_PROP_BY_PHANDLE(n, clocks, channel),                            \
+	.clock =                                                                                   \
+		{                                                                                  \
+			.block = IFX_CATX_PERIPHERAL_GROUP_ADJUST(                                 \
+				DT_PROP_BY_IDX(DT_INST_PHANDLE(n, clocks), peri_group, 0),         \
+				DT_PROP_BY_IDX(DT_INST_PHANDLE(n, clocks), peri_group, 1),         \
+				DT_INST_PROP_BY_PHANDLE(n, clocks, div_type)),                     \
+			.channel = DT_INST_PROP_BY_PHANDLE(n, clocks, channel),                    \
 	},                                                                                         \
 	PERI_INFO(n)
 #else
 #define I2C_PERI_CLOCK_INIT(n)                                                                     \
-	.clock = {                                                                                 \
-		.block = IFX_CAT1_PERIPHERAL_GROUP_ADJUST(                                         \
-			DT_PROP_BY_IDX(DT_INST_PHANDLE(n, clocks), peri_group, 1),                 \
-			DT_INST_PROP_BY_PHANDLE(n, clocks, div_type)),                             \
-		.channel = DT_INST_PROP_BY_PHANDLE(n, clocks, channel),                            \
+	.clock =                                                                                   \
+		{                                                                                  \
+			.block = IFX_CATX_PERIPHERAL_GROUP_ADJUST(                                 \
+				DT_PROP_BY_IDX(DT_INST_PHANDLE(n, clocks), peri_group, 1),         \
+				DT_INST_PROP_BY_PHANDLE(n, clocks, div_type)),                     \
+			.channel = DT_INST_PROP_BY_PHANDLE(n, clocks, channel),                    \
 	},                                                                                         \
 	PERI_INFO(n)
 #endif

@@ -6,7 +6,7 @@
  */
 
 /**
- * @brief Clock control driver for Infineon CAT1 MCU family.
+ * @brief Clock control driver for Infineon CATX MCU family.
  */
 
 #include <zephyr/drivers/clock_control.h>
@@ -14,7 +14,7 @@
 #include <stdlib.h>
 
 #include <infineon_kconfig.h>
-#include <zephyr/drivers/clock_control/clock_control_ifx_cat1.h>
+#include <zephyr/drivers/clock_control/clock_control_ifx_catx.h>
 #include <zephyr/dt-bindings/clock/ifx_clock_source_common.h>
 #include <zephyr/dt-bindings/clock/ifx_clock_source_boards.h>
 
@@ -49,13 +49,20 @@ static int fixed_factor_clk_init(const struct device *dev)
 	switch (config->block) {
 
 	case IFX_PATHMUX:
+#if !defined(CONFIG_SOC_FAMILY_INFINEON_CAT2)
 		Cy_SysClk_ClkPathSetSource(config->instance, config->source_path);
+#endif
 		break;
 
 	case IFX_HF:
+#if defined(CONFIG_SOC_FAMILY_INFINEON_CAT2)
+		Cy_SysClk_ClkHfSetSource(source_instance);
+		Cy_SysClk_ClkHfSetDivider(config->divider);
+#else
 		Cy_SysClk_ClkHfSetSource(config->instance, source_instance);
 		Cy_SysClk_ClkHfSetDivider(config->instance, config->divider);
 		Cy_SysClk_ClkHfEnable(config->instance);
+#endif
 		break;
 
 	default:
