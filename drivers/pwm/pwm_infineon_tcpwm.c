@@ -16,15 +16,24 @@
 #include <zephyr/drivers/timer/ifx_tcpwm.h>
 #include <zephyr/dt-bindings/pwm/pwm_ifx_tcpwm.h>
 
+#include <cy_device_headers.h>
+#include <infineon_kconfig.h>
 #include <cy_tcpwm_pwm.h>
+#include <cy_tcpwm.h>
 #include <cy_gpio.h>
 #include <cy_sysclk.h>
-
+#include <cy_tcpwm.h>
 #include <zephyr/logging/log.h>
+#define PSOC4_TCPWM_BASE_OFFSET 0x100
 LOG_MODULE_REGISTER(pwm_ifx_tcpwm, CONFIG_PWM_LOG_LEVEL);
 
 struct ifx_tcpwm_pwm_config {
+#if defined(CONFIG_SOC_FAMILY_INFINEON_CAT1)
 	TCPWM_GRP_CNT_Type *reg_base;
+#else
+	TCPWM_Type *reg_base;
+	TCPWM_Type * base;
+#endif
 	const struct pinctrl_dev_config *pcfg;
 	bool resolution_32_bits;
 	cy_en_divider_types_t divider_type;
@@ -38,7 +47,6 @@ static int ifx_tcpwm_pwm_init(const struct device *dev)
 	const struct ifx_tcpwm_pwm_config *config = dev->config;
 	cy_en_tcpwm_status_t status;
 	int ret;
-	uint32_t clk_connection;
 
 	const cy_stc_tcpwm_pwm_config_t pwm_config = {
 		.pwmMode = CY_TCPWM_PWM_MODE_PWM,
@@ -50,8 +58,9 @@ static int ifx_tcpwm_pwm_init(const struct device *dev)
 		.enableCompareSwap = true,
 		.enablePeriodSwap = true,
 	};
-
+#if defined(CONFIG_SOC_FAMILY_INFINEON_CAT1)
 	/* Configure PWM clock */
+	uint32_t clk_connection;	
 	Cy_SysClk_PeriphDisableDivider(config->divider_type, config->divider_sel);
 	Cy_SysClk_PeriphSetDivider(config->divider_type, config->divider_sel, config->divider_val);
 	Cy_SysClk_PeriphEnableDivider(config->divider_type, config->divider_sel);
@@ -64,6 +73,20 @@ static int ifx_tcpwm_pwm_init(const struct device *dev)
 	}
 
 	Cy_SysClk_PeriphAssignDivider(clk_connection, config->divider_type, config->divider_sel);
+#elif defined(CONFIG_SOC_FAMILY_INFINEON_PSOC4)
+
+	en_clk_dst_t clk_connection = (en_clk_dst_t)(PCLK_TCPWM_CLOCKS0 + config->tcpwm_index);
+
+	Cy_SysClk_PeriphDisableDivider(config->divider_type, config->divider_sel);
+	Cy_SysClk_PeriphSetDivider(config->divider_type, config->divider_sel, config->divider_val);
+	Cy_SysClk_PeriphEnableDivider(config->divider_type, config->divider_sel);
+
+	/* Assign divider to TCPWM block channel */
+	Cy_SysClk_PeriphAssignDivider(clk_connection, config->divider_type, config->divider_sel);
+
+#else
+#error "Unsupported Infineon SOC family"
+#endif
 
 	ret = pinctrl_apply_state(config->pcfg, PINCTRL_STATE_DEFAULT);
 	if (ret < 0) {
@@ -71,7 +94,7 @@ static int ifx_tcpwm_pwm_init(const struct device *dev)
 	}
 
 	/* Configure the TCPWM to be a PWM */
-	status = IFX_TCPWM_PWM_Init(config->reg_base, &pwm_config);
+	status = IFX_TCPWM_PWM_Init(config->base, &pwm_config);
 	if (status != CY_TCPWM_SUCCESS) {
 		return -ENOTSUP;
 	}
@@ -80,8 +103,8 @@ static int ifx_tcpwm_pwm_init(const struct device *dev)
 }
 
 static int ifx_tcpwm_pwm_set_cycles(const struct device *dev, uint32_t channel,
-				    uint32_t period_cycles, uint32_t pulse_cycles,
-				    pwm_flags_t flags)
+		uint32_t period_cycles, uint32_t pulse_cycles,
+		pwm_flags_t flags)
 {
 	ARG_UNUSED(channel);
 
@@ -90,7 +113,7 @@ static int ifx_tcpwm_pwm_set_cycles(const struct device *dev, uint32_t channel,
 	uint32_t ctrl_temp;
 
 	if (!config->resolution_32_bits &&
-	    ((period_cycles > UINT16_MAX) || (pulse_cycles > UINT16_MAX))) {
+			((period_cycles > UINT16_MAX) || (pulse_cycles > UINT16_MAX))) {
 		/* 16-bit resolution */
 		if (period_cycles > UINT16_MAX) {
 			LOG_ERR("Period cycles more than 16-bits (%u)", period_cycles);
@@ -100,6 +123,7 @@ static int ifx_tcpwm_pwm_set_cycles(const struct device *dev, uint32_t channel,
 		}
 		return -EINVAL;
 	}
+#if defined(CONFIG_SOC_FAMILY_INFINEON_CAT1)
 	if ((flags & PWM_POLARITY_MASK) == PWM_POLARITY_INVERTED) {
 		config->reg_base->CTRL |= TCPWM_GRP_CNT_V2_CTRL_QUAD_ENCODING_MODE_Msk;
 	} else {
@@ -109,8 +133,8 @@ static int ifx_tcpwm_pwm_set_cycles(const struct device *dev, uint32_t channel,
 	ctrl_temp = config->reg_base->CTRL & ~TCPWM_GRP_CNT_V2_CTRL_PWM_DISABLE_MODE_Msk;
 
 	config->reg_base->CTRL = ctrl_temp | _VAL2FLD(TCPWM_GRP_CNT_V2_CTRL_PWM_DISABLE_MODE,
-						      (flags & PWM_IFX_TCPWM_OUTPUT_MASK) >>
-							      PWM_IFX_TCPWM_OUTPUT_POS);
+			(flags & PWM_IFX_TCPWM_OUTPUT_MASK) >>
+			PWM_IFX_TCPWM_OUTPUT_POS);
 
 	/* If the PWM is not yet running, write the period and compare directly pwm won't start
 	 * correctly.
@@ -148,12 +172,45 @@ static int ifx_tcpwm_pwm_set_cycles(const struct device *dev, uint32_t channel,
 
 	/* Start the TCPWM block */
 	IFX_TCPWM_TriggerStart_Single(config->reg_base);
+#else
+	/* PSOC4 config */
+	if ((flags & PWM_POLARITY_MASK) == PWM_POLARITY_INVERTED) {
+		config->base->CTRL |= TCPWM_CNT_CTRL_QUADRATURE_MODE_Msk;
+	} else {
+		config->base->CTRL &= ~TCPWM_CNT_CTRL_QUADRATURE_MODE_Msk;
+	}
 
+	pwm_status = IFX_TCPWM_PWM_GetStatus(config->base);
+	if ((pwm_status & TCPWM_CNT_STATUS_RUNNING_Msk) == 0) {
+		if ((period_cycles != 0) && (pulse_cycles != 0)) {
+			IFX_TCPWM_PWM_SetPeriod0(config->base, period_cycles - 1);
+			//IFX_TCPWM_PWM_SetCompare0Val(config->base, pulse_cycles);
+			Cy_TCPWM_PWM_SetCompare0(config->base , 0, pulse_cycles);
+		}
+	}
+
+	if (period_cycles == 0) {
+		IFX_TCPWM_PWM_SetPeriod1(config->base, 0);
+		//IFX_TCPWM_PWM_SetCompare0BufVal(config->base, 0);
+		Cy_TCPWM_PWM_SetCompare0(config->base , 0, 0);
+		Cy_TCPWM_TriggerCaptureOrSwap(config->base, 0);
+	} else {
+		IFX_TCPWM_PWM_SetPeriod1(config->base, period_cycles - 1);
+		//IFX_TCPWM_PWM_SetCompare0BufVal(config->base, pulse_cycles);
+		Cy_TCPWM_PWM_SetCompare0(config->base, 0, pulse_cycles);
+
+		Cy_TCPWM_TriggerCaptureOrSwap(config->base, 0);
+	}
+	IFX_TCPWM_PWM_Enable(config->base);
+	//IFX_TCPWM_TriggerStart_Single(config->base);
+	Cy_TCPWM_TriggerStart(config->base, 1);
+#endif	
+	/* PSOC4 config */
 	return 0;
 }
 
 static int ifx_tcpwm_pwm_get_cycles_per_sec(const struct device *dev, uint32_t channel,
-					    uint64_t *cycles)
+		uint64_t *cycles)
 {
 	ARG_UNUSED(channel);
 
@@ -169,23 +226,33 @@ static DEVICE_API(pwm, ifx_tcpwm_pwm_api) = {
 	.get_cycles_per_sec = ifx_tcpwm_pwm_get_cycles_per_sec,
 };
 
-#define INFINEON_TCPWM_PWM_INIT(n)                                                                 \
-	PINCTRL_DT_INST_DEFINE(n);                                                                 \
-                                                                                                   \
-	static const struct ifx_tcpwm_pwm_config pwm_tcpwm_config_##n = {                          \
-		.reg_base = (TCPWM_GRP_CNT_Type *)DT_REG_ADDR(DT_INST_PARENT(n)),                  \
-		.tcpwm_index = (DT_REG_ADDR(DT_INST_PARENT(n)) -                                   \
-				DT_REG_ADDR(DT_PARENT(DT_INST_PARENT(n)))) /                       \
-			       DT_REG_SIZE(DT_INST_PARENT(n)),                                     \
-		.pcfg = PINCTRL_DT_INST_DEV_CONFIG_GET(n),                                         \
-		.resolution_32_bits =                                                              \
-			(DT_PROP(DT_INST_PARENT(n), resolution) == 32) ? true : false,             \
-		.divider_type = DT_PROP(DT_INST_PARENT(n), divider_type),                          \
-		.divider_sel = DT_PROP(DT_INST_PARENT(n), divider_sel),                            \
-		.divider_val = DT_PROP(DT_INST_PARENT(n), divider_val),                            \
-	};                                                                                         \
-                                                                                                   \
-	DEVICE_DT_INST_DEFINE(n, ifx_tcpwm_pwm_init, NULL, NULL, &pwm_tcpwm_config_##n,            \
-			      POST_KERNEL, CONFIG_PWM_INIT_PRIORITY, &ifx_tcpwm_pwm_api);
+#if defined(CONFIG_SOC_FAMILY_INFINEON_PSOC4)
+#define IFX_TCPWM_BASE_INIT(n) \
+    .base = (TCPWM_Type *)(DT_REG_ADDR(DT_PARENT(DT_INST_PARENT(n))) - PSOC4_TCPWM_BASE_OFFSET), \
+    .reg_base = (TCPWM_Type *)(DT_REG_ADDR(DT_INST_PARENT(n))),
+#else
+#define IFX_TCPWM_BASE_INIT(n) \
+    .reg_base = (TCPWM_GRP_CNT_Type *)(DT_REG_ADDR(DT_INST_PARENT(n))),
+#endif
+#define INFINEON_TCPWM_PWM_INIT(n)                                                      \
+	PINCTRL_DT_INST_DEFINE(n);                                                      \
+											\
+	static const struct ifx_tcpwm_pwm_config pwm_tcpwm_pwm_config_##n = {           \
+		IFX_TCPWM_BASE_INIT(n)                                          	\
+		.tcpwm_index = (DT_REG_ADDR(DT_INST_PARENT(n)) -                        \
+				DT_REG_ADDR(DT_PARENT(DT_INST_PARENT(n)))) /            \
+		DT_REG_SIZE(DT_INST_PARENT(n)),                 			\
+		.pcfg = PINCTRL_DT_INST_DEV_CONFIG_GET(n),                              \
+		.resolution_32_bits =                                                   \
+		(DT_PROP(DT_INST_PARENT(n), resolution) == 32) ? true : false, 		\
+		.divider_type = DT_PROP(DT_INST_PARENT(n), divider_type),               \
+		.divider_sel = DT_PROP(DT_INST_PARENT(n), divider_sel),         	\
+		.divider_val = DT_PROP(DT_INST_PARENT(n), divider_val),         	\
+	};                                                                              \
+											\
+	DEVICE_DT_INST_DEFINE(n, ifx_tcpwm_pwm_init, NULL, NULL,                        \
+			&pwm_tcpwm_pwm_config_##n,                                	\
+			POST_KERNEL, CONFIG_PWM_INIT_PRIORITY,                    	\
+			&ifx_tcpwm_pwm_api);						\
 
 DT_INST_FOREACH_STATUS_OKAY(INFINEON_TCPWM_PWM_INIT)

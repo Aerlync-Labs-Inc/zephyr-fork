@@ -1,0 +1,36 @@
+#include <zephyr/dt-bindings/pwm/pwm.h>
+
+/ {
+        aliases {
+                pwm-led0 = &pwm_led0;
+        };  
+
+        pwmleds {
+                compatible = "pwm-leds";
+
+                pwm_led0: pwm_led0 {
+                        label = "PWM LED0";
+                        pwms = <&pwm0_0 0 PWM_MSEC(1U) PWM_POLARITY_NORMAL>;
+                };  
+        };  
+};
+
+&tcpwm0_0 {
+        status = "okay";
+	divider-type = <DIV_16_BIT>;
+	divider-sel = <1>;
+	divider-val = <11499>;
+	interrupts = <16 0>;
+	clocks = <&peri_div_16bit_3>;
+	pwm0_0 {
+                compatible = "infineon,tcpwm-pwm";
+                status = "okay";
+                pinctrl-0 = <&p3_1_pwm0_0>;
+                pinctrl-names = "default";
+        };
+
+};
+
+&p3_1_pwm0_0 {
+	drive-push-pull;
+};
