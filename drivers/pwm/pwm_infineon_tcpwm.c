@@ -93,9 +93,14 @@ static int ifx_tcpwm_pwm_init(const struct device *dev)
 		return ret;
 	}
 
+	LOG_DBG("ifx_tcpwm: pwm init dev=%p tcpwm_index=%u pinctrl_ret=%d",
+		dev, config->tcpwm_index, ret);
+
 	/* Configure the TCPWM to be a PWM */
 	status = IFX_TCPWM_PWM_Init(config->base, &pwm_config);
+	LOG_DBG("ifx_tcpwm: PWM init status=0x%08x", status);
 	if (status != CY_TCPWM_SUCCESS) {
+		LOG_ERR("ifx_tcpwm: PWM init failed status=0x%08x", status);
 		return -ENOTSUP;
 	}
 
@@ -106,11 +111,13 @@ static int ifx_tcpwm_pwm_set_cycles(const struct device *dev, uint32_t channel,
 		uint32_t period_cycles, uint32_t pulse_cycles,
 		pwm_flags_t flags)
 {
-	ARG_UNUSED(channel);
-
 	const struct ifx_tcpwm_pwm_config *config = dev->config;
+	uint32_t cnt = config->tcpwm_index;
 	uint32_t pwm_status;
 	uint32_t ctrl_temp;
+
+	    LOG_DBG("ifx_tcpwm: dev=%p ch=%u tcpwm_index=%u cnt=%u period=%u pulse=%u",
+		    dev, channel, config->tcpwm_index, cnt, period_cycles, pulse_cycles);
 
 	if (!config->resolution_32_bits &&
 			((period_cycles > UINT16_MAX) || (pulse_cycles > UINT16_MAX))) {
@@ -183,27 +190,46 @@ static int ifx_tcpwm_pwm_set_cycles(const struct device *dev, uint32_t channel,
 	pwm_status = IFX_TCPWM_PWM_GetStatus(config->base);
 	if ((pwm_status & TCPWM_CNT_STATUS_RUNNING_Msk) == 0) {
 		if ((period_cycles != 0) && (pulse_cycles != 0)) {
-			IFX_TCPWM_PWM_SetPeriod0(config->base, period_cycles - 1);
-			//IFX_TCPWM_PWM_SetCompare0Val(config->base, pulse_cycles);
-			Cy_TCPWM_PWM_SetCompare0(config->base , 0, pulse_cycles);
+		    Cy_TCPWM_PWM_SetPeriod0(config->base, cnt, period_cycles - 1);
+		    Cy_TCPWM_PWM_SetCompare0(config->base, cnt, pulse_cycles);
+		    LOG_DBG("ifx_tcpwm: wrote period0=%u compare0=%u for cnt=%u",
+			    period_cycles - 1, pulse_cycles, cnt);
+		    LOG_DBG("ifx_tcpwm: readback period0=%u compare0=%u",
+			    Cy_TCPWM_PWM_GetPeriod0(config->base, cnt),
+			    Cy_TCPWM_PWM_GetCompare0(config->base, cnt));
 		}
 	}
 
 	if (period_cycles == 0) {
-		IFX_TCPWM_PWM_SetPeriod1(config->base, 0);
-		//IFX_TCPWM_PWM_SetCompare0BufVal(config->base, 0);
-		Cy_TCPWM_PWM_SetCompare0(config->base , 0, 0);
-		Cy_TCPWM_TriggerCaptureOrSwap(config->base, 0);
-	} else {
-		IFX_TCPWM_PWM_SetPeriod1(config->base, period_cycles - 1);
-		//IFX_TCPWM_PWM_SetCompare0BufVal(config->base, pulse_cycles);
-		Cy_TCPWM_PWM_SetCompare0(config->base, 0, pulse_cycles);
+		Cy_TCPWM_PWM_SetPeriod1(config->base, cnt, 0);
+		Cy_TCPWM_PWM_SetCompare0(config->base, cnt, 0);
+		LOG_DBG("ifx_tcpwm: trigger capture/swap mask=0x%lx for cnt=%u", (1UL << cnt), cnt);
+		Cy_TCPWM_TriggerCaptureOrSwap(config->base, (1UL << cnt));
 
-		Cy_TCPWM_TriggerCaptureOrSwap(config->base, 0);
+		/* Readback buffered values after swap */
+		LOG_DBG("ifx_tcpwm: after swap period1=%u period0=%u compare0=%u compare0buf=%u",
+			Cy_TCPWM_PWM_GetPeriod1(config->base, cnt),
+			Cy_TCPWM_PWM_GetPeriod0(config->base, cnt),
+			Cy_TCPWM_PWM_GetCompare0(config->base, cnt),
+			Cy_TCPWM_PWM_GetCompare0(config->base, cnt));
+	} else {
+		Cy_TCPWM_PWM_SetPeriod1(config->base, cnt, period_cycles - 1);
+		Cy_TCPWM_PWM_SetCompare0(config->base, cnt, pulse_cycles);
+		LOG_DBG("ifx_tcpwm: trigger capture/swap mask=0x%lx for cnt=%u", (1UL << cnt), cnt);
+		Cy_TCPWM_TriggerCaptureOrSwap(config->base, (1UL << cnt));
+
+		/* Readback buffered values after swap */
+		LOG_DBG("ifx_tcpwm: after swap period1=%u period0=%u compare0=%u compare0buf=%u",
+			Cy_TCPWM_PWM_GetPeriod1(config->base, cnt),
+			Cy_TCPWM_PWM_GetPeriod0(config->base, cnt),
+			Cy_TCPWM_PWM_GetCompare0(config->base, cnt),
+			Cy_TCPWM_PWM_GetCompare0(config->base, cnt));
 	}
 	IFX_TCPWM_PWM_Enable(config->base);
-	//IFX_TCPWM_TriggerStart_Single(config->base);
-	Cy_TCPWM_TriggerStart(config->base, 1);
+	LOG_DBG("ifx_tcpwm: status before start=0x%08x", IFX_TCPWM_PWM_GetStatus(config->base));
+	/* Start only this counter */
+	Cy_TCPWM_TriggerStart(config->base, (1UL << cnt));
+	LOG_DBG("ifx_tcpwm: status after start=0x%08x", IFX_TCPWM_PWM_GetStatus(config->base));
 #endif	
 	/* PSOC4 config */
 	return 0;
@@ -234,25 +260,26 @@ static DEVICE_API(pwm, ifx_tcpwm_pwm_api) = {
 #define IFX_TCPWM_BASE_INIT(n) \
     .reg_base = (TCPWM_GRP_CNT_Type *)(DT_REG_ADDR(DT_INST_PARENT(n))),
 #endif
+/* Define and instantiate device instances from DT (multi-line for reliable macro
+ * expansion and easier debugging)
+ */
 #define INFINEON_TCPWM_PWM_INIT(n)                                                      \
-	PINCTRL_DT_INST_DEFINE(n);                                                      \
-											\
-	static const struct ifx_tcpwm_pwm_config pwm_tcpwm_pwm_config_##n = {           \
-		IFX_TCPWM_BASE_INIT(n)                                          	\
-		.tcpwm_index = (DT_REG_ADDR(DT_INST_PARENT(n)) -                        \
-				DT_REG_ADDR(DT_PARENT(DT_INST_PARENT(n)))) /            \
-		DT_REG_SIZE(DT_INST_PARENT(n)),                 			\
-		.pcfg = PINCTRL_DT_INST_DEV_CONFIG_GET(n),                              \
-		.resolution_32_bits =                                                   \
-		(DT_PROP(DT_INST_PARENT(n), resolution) == 32) ? true : false, 		\
-		.divider_type = DT_PROP(DT_INST_PARENT(n), divider_type),               \
-		.divider_sel = DT_PROP(DT_INST_PARENT(n), divider_sel),         	\
-		.divider_val = DT_PROP(DT_INST_PARENT(n), divider_val),         	\
-	};                                                                              \
-											\
-	DEVICE_DT_INST_DEFINE(n, ifx_tcpwm_pwm_init, NULL, NULL,                        \
-			&pwm_tcpwm_pwm_config_##n,                                	\
-			POST_KERNEL, CONFIG_PWM_INIT_PRIORITY,                    	\
-			&ifx_tcpwm_pwm_api);						\
+	PINCTRL_DT_INST_DEFINE(n);                                                          \													   \
+	static const struct ifx_tcpwm_pwm_config pwm_tcpwm_pwm_config_##n = {               \
+		IFX_TCPWM_BASE_INIT(n)                                                          \
+		.tcpwm_index = (DT_REG_ADDR(DT_INST_PARENT(n)) -                                \
+				DT_REG_ADDR(DT_PARENT(DT_INST_PARENT(n)))) /                           \
+			DT_REG_SIZE(DT_INST_PARENT(n)),                                             \
+		.pcfg = PINCTRL_DT_INST_DEV_CONFIG_GET(n),                                      \
+		.resolution_32_bits =                                                          \
+			(DT_PROP(DT_INST_PARENT(n), resolution) == 32) ? true : false,              \
+		.divider_type = DT_PROP(DT_INST_PARENT(n), divider_type),                       \
+		.divider_sel = DT_PROP(DT_INST_PARENT(n), divider_sel),                         \
+		.divider_val = DT_PROP(DT_INST_PARENT(n), divider_val),                         \
+	};                                                                                 \
+											   \
+	DEVICE_DT_INST_DEFINE(n, ifx_tcpwm_pwm_init, NULL, NULL,                            \
+			&pwm_tcpwm_pwm_config_##n, POST_KERNEL, CONFIG_PWM_INIT_PRIORITY,           \
+			&ifx_tcpwm_pwm_api);
 
 DT_INST_FOREACH_STATUS_OKAY(INFINEON_TCPWM_PWM_INIT)

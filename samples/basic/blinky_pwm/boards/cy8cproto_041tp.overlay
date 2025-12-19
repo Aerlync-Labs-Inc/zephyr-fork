@@ -21,7 +21,7 @@
 	divider-sel = <1>;
 	divider-val = <11499>;
 	interrupts = <16 0>;
-	clocks = <&peri_div_16bit_3>;
+	clocks = <&peri_div_16bit_4>;
 	pwm0_0 {
                 compatible = "infineon,tcpwm-pwm";
                 status = "okay";

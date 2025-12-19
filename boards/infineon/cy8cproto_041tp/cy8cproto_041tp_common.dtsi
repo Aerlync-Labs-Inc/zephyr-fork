@@ -42,6 +42,13 @@ uart0: &scb0 {
 	clock-div = <11500>;
 };
 
+&peri_div_16bit_4 {
+        status = "okay";
+        resource-type = <IFX_RSC_TCPWM>;
+        resource-instance = <1>;
+        clock-div = <11500>;
+};
+
 /*
  * Note : use IFX_PATH_PSOC4_IMO for internal main oscillator as src
  *	  use IFX_PATH_PSOC4_EXT for External clock as src
