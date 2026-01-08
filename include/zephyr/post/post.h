@@ -88,6 +88,8 @@ enum post_test_flags {
 	POST_FLAG_USERSPACE_OK = BIT(3),
 	/** Failure of this test should halt boot */
 	POST_FLAG_CRITICAL = BIT(4),
+	/** Test is from a vendor library */
+	POST_FLAG_VENDOR = BIT(5),
 };
 
 /**
