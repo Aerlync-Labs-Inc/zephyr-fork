@@ -186,8 +186,43 @@ static int cmd_post_status(const struct shell *sh, size_t argc, char **argv)
 
 	if (failed > 0) {
 		shell_error(sh, "  STATUS: FAIL");
+		shell_print(sh, "\nFailed Tests:");
+		shell_print(sh, "%-4s %-24s %-10s %-10s", "ID", "Name", "ErrCode", "ErrData");
+		STRUCT_SECTION_FOREACH(post_test, test) {
+			struct post_result_record record;
+			if (post_get_result(test->id, &record) == 0) {
+				if (record.result == POST_RESULT_FAIL || 
+				    record.result == POST_RESULT_ERROR) {
+					shell_error(sh, "%04x %-24s 0x%08x 0x%08x", 
+						    test->id, test->name, 
+						    record.error_code, record.error_data);
+				}
+			}
+		}
 	} else {
 		shell_print(sh, "  STATUS: OK");
+	}
+
+	if (skipped > 0) {
+		shell_print(sh, "\nSkipped Tests:");
+		STRUCT_SECTION_FOREACH(post_test, test) {
+			struct post_result_record record;
+			if (post_get_result(test->id, &record) == 0 && 
+			    record.result == POST_RESULT_SKIP) {
+				shell_warn(sh, "%04x %-24s", test->id, test->name);
+			}
+		}
+	}
+
+	if (passed > 0) {
+		shell_print(sh, "\nPassed Tests:");
+		STRUCT_SECTION_FOREACH(post_test, test) {
+			struct post_result_record record;
+			if (post_get_result(test->id, &record) == 0 && 
+			    record.result == POST_RESULT_PASS) {
+				shell_print(sh, "%04x %-24s", test->id, test->name);
+			}
+		}
 	}
 
 	return 0;

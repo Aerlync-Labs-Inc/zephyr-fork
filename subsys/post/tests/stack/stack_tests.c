@@ -28,7 +28,9 @@ static enum post_result stack_pattern_test_fn(const struct post_context *ctx)
 	ARG_UNUSED(ctx);
 
 	struct k_thread *current = k_current_get();
+#ifdef CONFIG_THREAD_STACK_INFO
 	size_t unused = 0;
+#endif
 	int ret;
 
 	if (current == NULL) {
