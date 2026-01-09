@@ -70,7 +70,7 @@ static enum post_result flash_crc_test_fn(const struct post_context *ctx)
 #endif
 }
 
-POST_FLASH_TEST(flash_crc, 0x0030, POST_LEVEL_APPLICATION, flash_crc_test_fn);
+POST_FLASH_TEST(flash_crc, POST_LEVEL_APPLICATION, flash_crc_test_fn);
 
 /**
  * @brief Flash read test
@@ -96,6 +96,6 @@ static enum post_result flash_read_test_fn(const struct post_context *ctx)
 	return POST_RESULT_PASS;
 }
 
-POST_TEST_DEFINE(flash_read, 0x0031, POST_CAT_FLASH, POST_LEVEL_POST_KERNEL,
+POST_TEST_DEFINE(flash_read, POST_CAT_FLASH, POST_LEVEL_POST_KERNEL,
 		 35, POST_FLAG_RUNTIME_OK | POST_FLAG_USERSPACE_OK,
 		 flash_read_test_fn, "Flash read verification test");

@@ -98,7 +98,7 @@ static enum post_result ram_march_c_test_fn(const struct post_context *ctx)
 	return POST_RESULT_PASS;
 }
 
-POST_RAM_TEST(ram_march_c, 0x0010, POST_LEVEL_PRE_KERNEL_1, ram_march_c_test_fn);
+POST_RAM_TEST(ram_march_c, POST_LEVEL_PRE_KERNEL_1, ram_march_c_test_fn);
 
 /**
  * @brief Checkerboard RAM test
@@ -149,5 +149,5 @@ static enum post_result ram_checkerboard_test_fn(const struct post_context *ctx)
 	return POST_RESULT_PASS;
 }
 
-POST_RAM_TEST(ram_checkerboard, 0x0011, POST_LEVEL_PRE_KERNEL_2,
+POST_RAM_TEST(ram_checkerboard, POST_LEVEL_PRE_KERNEL_2,
 	      ram_checkerboard_test_fn);

@@ -32,43 +32,44 @@ extern "C" {
  *
  * This macro wraps a vendor test function that returns 0 on success
  * and non-zero on failure, converting it to the POST result format.
+ * Test IDs are automatically assigned sequentially at link time (0, 1, 2, ...).
  *
  * @param _name    Unique C identifier for the test
- * @param _id      Numeric test ID (use vendor-specific range)
  * @param _cat     Test category (POST_CAT_*)
  * @param _level   Earliest init level (POST_LEVEL_*)
  * @param _vendor_fn Vendor test function (must return 0=pass, non-zero=fail)
  * @param _desc    Human-readable description
  */
-#define POST_VENDOR_TEST_WRAP(_name, _id, _cat, _level, _vendor_fn, _desc) \
+#define POST_VENDOR_TEST_WRAP(_name, _cat, _level, _vendor_fn, _desc) \
 	static enum post_result _name##_wrapper(const struct post_context *ctx) \
 	{ \
 		ARG_UNUSED(ctx); \
 		return ((_vendor_fn)() == 0) ? POST_RESULT_PASS : POST_RESULT_FAIL; \
 	} \
-	POST_TEST_DEFINE(_name, _id, _cat, _level, 50, \
+	POST_TEST_DEFINE(_name, _cat, _level, 50, \
 			 POST_FLAG_VENDOR | POST_FLAG_RUNTIME_OK, \
 			 _name##_wrapper, _desc)
 
 /**
  * @brief Wrap a vendor test with custom flags
  *
+ * Test IDs are automatically assigned sequentially at link time (0, 1, 2, ...).
+ *
  * @param _name      Unique C identifier for the test
- * @param _id        Numeric test ID
  * @param _cat       Test category (POST_CAT_*)
  * @param _level     Earliest init level (POST_LEVEL_*)
  * @param _flags     Additional flags (POST_FLAG_VENDOR is added automatically)
  * @param _vendor_fn Vendor test function (must return 0=pass, non-zero=fail)
  * @param _desc      Human-readable description
  */
-#define POST_VENDOR_TEST_WRAP_FLAGS(_name, _id, _cat, _level, _flags, \
+#define POST_VENDOR_TEST_WRAP_FLAGS(_name, _cat, _level, _flags, \
 				    _vendor_fn, _desc) \
 	static enum post_result _name##_wrapper(const struct post_context *ctx) \
 	{ \
 		ARG_UNUSED(ctx); \
 		return ((_vendor_fn)() == 0) ? POST_RESULT_PASS : POST_RESULT_FAIL; \
 	} \
-	POST_TEST_DEFINE(_name, _id, _cat, _level, 50, \
+	POST_TEST_DEFINE(_name, _cat, _level, 50, \
 			 POST_FLAG_VENDOR | (_flags), \
 			 _name##_wrapper, _desc)
 
@@ -77,9 +78,9 @@ extern "C" {
  *
  * For tests that require hardware initialization before running
  * and cleanup afterward.
+ * Test IDs are automatically assigned sequentially at link time (0, 1, 2, ...).
  *
  * @param _name       Unique C identifier for the test
- * @param _id         Numeric test ID
  * @param _cat        Test category (POST_CAT_*)
  * @param _level      Earliest init level (POST_LEVEL_*)
  * @param _init_fn    Init function (called before test, can be NULL)
@@ -87,7 +88,7 @@ extern "C" {
  * @param _cleanup_fn Cleanup function (called after test, can be NULL)
  * @param _desc       Human-readable description
  */
-#define POST_VENDOR_TEST_WRAP_EX(_name, _id, _cat, _level, \
+#define POST_VENDOR_TEST_WRAP_EX(_name, _cat, _level, \
 				 _init_fn, _vendor_fn, _cleanup_fn, _desc) \
 	static enum post_result _name##_wrapper(const struct post_context *ctx) \
 	{ \
@@ -102,25 +103,9 @@ extern "C" {
 		} \
 		return result; \
 	} \
-	POST_TEST_DEFINE(_name, _id, _cat, _level, 50, \
+	POST_TEST_DEFINE(_name, _cat, _level, 50, \
 			 POST_FLAG_VENDOR | POST_FLAG_RUNTIME_OK, \
 			 _name##_wrapper, _desc)
-
-/**
- * @brief Vendor test ID ranges
- *
- * To avoid ID conflicts, vendors should use allocated ranges:
- */
-#define POST_VENDOR_ID_ZEPHYR_START     0x0001  /**< Zephyr built-in tests */
-#define POST_VENDOR_ID_ZEPHYR_END       0x0FFF
-#define POST_VENDOR_ID_INFINEON_START   0x1000  /**< Infineon MTB-STL */
-#define POST_VENDOR_ID_INFINEON_END     0x1FFF
-#define POST_VENDOR_ID_TI_START         0x2000  /**< TI SafeTI */
-#define POST_VENDOR_ID_TI_END           0x2FFF
-#define POST_VENDOR_ID_NXP_START        0x3000  /**< NXP Safety */
-#define POST_VENDOR_ID_NXP_END          0x3FFF
-#define POST_VENDOR_ID_APP_START        0x8000  /**< Application custom */
-#define POST_VENDOR_ID_APP_END          0xFFFF
 
 /** @} */
 

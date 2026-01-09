@@ -71,7 +71,7 @@ static enum post_result stack_pattern_test_fn(const struct post_context *ctx)
 	return POST_RESULT_PASS;
 }
 
-POST_STACK_TEST(stack_pattern, 0x0020, POST_LEVEL_POST_KERNEL,
+POST_STACK_TEST(stack_pattern, POST_LEVEL_POST_KERNEL,
 		stack_pattern_test_fn);
 
 /**
@@ -103,6 +103,6 @@ static enum post_result stack_guard_test_fn(const struct post_context *ctx)
 #endif
 }
 
-POST_TEST_DEFINE(stack_guard, 0x0021, POST_CAT_STACK, POST_LEVEL_POST_KERNEL,
+POST_TEST_DEFINE(stack_guard, POST_CAT_STACK, POST_LEVEL_POST_KERNEL,
 		 25, POST_FLAG_RUNTIME_OK | POST_FLAG_USERSPACE_OK,
 		 stack_guard_test_fn, "Stack guard mechanism test");

@@ -197,9 +197,10 @@ typedef void (*post_failure_cb)(const struct post_test *test,
  *
  * Registers a test function to be executed at the specified initialization
  * level. Tests are automatically collected into an iterable section.
+ * Test IDs are automatically assigned sequentially at link time (0, 1, 2, ...)
+ * based on the test's position in the sorted array.
  *
  * @param _name    Unique C identifier for the test
- * @param _id      Numeric test ID (must be unique)
  * @param _cat     Test category (POST_CAT_*)
  * @param _level   Earliest init level (POST_LEVEL_*)
  * @param _prio    Priority within level (0-255, lower = earlier)
@@ -207,11 +208,11 @@ typedef void (*post_failure_cb)(const struct post_test *test,
  * @param _fn      Test function (post_test_fn)
  * @param _desc    Human-readable description string
  */
-#define POST_TEST_DEFINE(_name, _id, _cat, _level, _prio, _flags, _fn, _desc) \
+#define POST_TEST_DEFINE(_name, _cat, _level, _prio, _flags, _fn, _desc) \
 	static const STRUCT_SECTION_ITERABLE(post_test, Z_POST_TEST_NAME(_name)) = { \
 		.name = STRINGIFY(_name), \
 		.description = _desc, \
-		.id = _id, \
+		.id = 0, /* Computed from array position at runtime */ \
 		.category = _cat, \
 		.init_level = _level, \
 		.priority = _prio, \
@@ -224,13 +225,14 @@ typedef void (*post_failure_cb)(const struct post_test *test,
  * @brief Define a POST test with timeout
  *
  * Same as POST_TEST_DEFINE but with a timeout value.
+ * Test IDs are automatically assigned sequentially at link time (0, 1, 2, ...).
  */
-#define POST_TEST_DEFINE_TIMEOUT(_name, _id, _cat, _level, _prio, _flags, \
+#define POST_TEST_DEFINE_TIMEOUT(_name, _cat, _level, _prio, _flags, \
 				 _fn, _desc, _timeout_ms) \
 	static const STRUCT_SECTION_ITERABLE(post_test, Z_POST_TEST_NAME(_name)) = { \
 		.name = STRINGIFY(_name), \
 		.description = _desc, \
-		.id = _id, \
+		.id = 0, /* Computed from array position at runtime */ \
 		.category = _cat, \
 		.init_level = _level, \
 		.priority = _prio, \
@@ -242,8 +244,8 @@ typedef void (*post_failure_cb)(const struct post_test *test,
 /**
  * @brief Define a CPU test (convenience macro)
  */
-#define POST_CPU_TEST(_name, _id, _level, _fn) \
-	POST_TEST_DEFINE(_name, _id, POST_CAT_CPU, _level, 0, \
+#define POST_CPU_TEST(_name, _level, _fn) \
+	POST_TEST_DEFINE(_name, POST_CAT_CPU, _level, 0, \
 			 POST_FLAG_RUNTIME_OK | POST_FLAG_CRITICAL, \
 			 _fn, "CPU test: " STRINGIFY(_name))
 
@@ -252,8 +254,8 @@ typedef void (*post_failure_cb)(const struct post_test *test,
  *
  * RAM tests are typically destructive and boot-only.
  */
-#define POST_RAM_TEST(_name, _id, _level, _fn) \
-	POST_TEST_DEFINE(_name, _id, POST_CAT_RAM, _level, 10, \
+#define POST_RAM_TEST(_name, _level, _fn) \
+	POST_TEST_DEFINE(_name, POST_CAT_RAM, _level, 10, \
 			 POST_FLAG_BOOT_ONLY | POST_FLAG_DESTRUCTIVE | \
 			 POST_FLAG_CRITICAL, \
 			 _fn, "RAM test: " STRINGIFY(_name))
@@ -261,16 +263,16 @@ typedef void (*post_failure_cb)(const struct post_test *test,
 /**
  * @brief Define a Stack test (convenience macro)
  */
-#define POST_STACK_TEST(_name, _id, _level, _fn) \
-	POST_TEST_DEFINE(_name, _id, POST_CAT_STACK, _level, 20, \
+#define POST_STACK_TEST(_name, _level, _fn) \
+	POST_TEST_DEFINE(_name, POST_CAT_STACK, _level, 20, \
 			 POST_FLAG_RUNTIME_OK | POST_FLAG_USERSPACE_OK, \
 			 _fn, "Stack test: " STRINGIFY(_name))
 
 /**
  * @brief Define a Flash test (convenience macro)
  */
-#define POST_FLASH_TEST(_name, _id, _level, _fn) \
-	POST_TEST_DEFINE(_name, _id, POST_CAT_FLASH, _level, 30, \
+#define POST_FLASH_TEST(_name, _level, _fn) \
+	POST_TEST_DEFINE(_name, POST_CAT_FLASH, _level, 30, \
 			 POST_FLAG_RUNTIME_OK | POST_FLAG_USERSPACE_OK, \
 			 _fn, "Flash test: " STRINGIFY(_name))
 

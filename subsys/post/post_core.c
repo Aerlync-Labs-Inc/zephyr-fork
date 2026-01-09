@@ -42,6 +42,18 @@ static uint32_t total_skipped;
  * Internal helpers
  */
 
+/**
+ * @brief Compute test ID from test pointer position
+ *
+ * Test IDs are computed from the test's position in the sorted array.
+ * This provides sequential IDs (0, 1, 2, ...) based on linker sort order.
+ */
+static inline uint32_t post_compute_test_id(const struct post_test *test)
+{
+	extern struct post_test _post_test_list_start[];
+	return (uint32_t)(test - _post_test_list_start);
+}
+
 static struct post_result_record *find_result(uint32_t test_id)
 {
 	for (uint32_t i = 0; i < result_count; i++) {
@@ -52,8 +64,10 @@ static struct post_result_record *find_result(uint32_t test_id)
 	return NULL;
 }
 
-static struct post_result_record *alloc_result(uint32_t test_id)
+static struct post_result_record *alloc_result(const struct post_test *test)
 {
+	uint32_t test_id = post_compute_test_id(test);
+	
 	/* Check if already exists */
 	struct post_result_record *rec = find_result(test_id);
 
@@ -86,9 +100,11 @@ static void invoke_failure_hooks(const struct post_test *test,
 
 static enum post_result execute_test(const struct post_test *test)
 {
+	uint32_t test_id = post_compute_test_id(test);
+	
 	struct post_context ctx = {
 		.init_level = test->init_level,
-		.test_id = test->id,
+		.test_id = test_id,
 		.start_time = 0,
 		.user_data = NULL,
 	};
@@ -103,7 +119,7 @@ static enum post_result execute_test(const struct post_test *test)
 		start_us = k_ticks_to_us_floor64(k_uptime_ticks());
 	}
 
-	LOG_INF("Running test: %s (ID=%u)", test->name, test->id);
+	LOG_INF("Running test: %s (ID=%u)", test->name, test_id);
 
 	/* Execute the test */
 	result = test->test_fn(&ctx);
@@ -114,7 +130,7 @@ static enum post_result execute_test(const struct post_test *test)
 	}
 
 	/* Store result */
-	struct post_result_record *rec = alloc_result(test->id);
+	struct post_result_record *rec = alloc_result(test);
 
 	if (rec != NULL) {
 		rec->result = result;
@@ -183,26 +199,30 @@ int post_run_level(enum post_init_level level)
 
 enum post_result post_run_test(uint32_t test_id)
 {
-	STRUCT_SECTION_FOREACH(post_test, test) {
-		if (test->id == test_id) {
-			if (!IS_ENABLED(CONFIG_POST_RUNTIME_TESTS) &&
-			    !(test->flags & POST_FLAG_BOOT_ONLY)) {
-				LOG_WRN("Runtime tests disabled");
-				return POST_RESULT_SKIP;
-			}
-
-			if (!(test->flags & POST_FLAG_RUNTIME_OK) &&
-			    !(test->flags & POST_FLAG_BOOT_ONLY)) {
-				LOG_WRN("Test %u not safe for runtime", test_id);
-				return POST_RESULT_SKIP;
-			}
-
-			return execute_test(test);
-		}
+	extern struct post_test _post_test_list_start[];
+	extern struct post_test _post_test_list_end[];
+	
+	/* Direct array access - O(1) lookup */
+	if (test_id >= (uint32_t)(_post_test_list_end - _post_test_list_start)) {
+		LOG_ERR("Test ID %u not found", test_id);
+		return POST_RESULT_ERROR;
 	}
 
-	LOG_ERR("Test ID %u not found", test_id);
-	return POST_RESULT_ERROR;
+	const struct post_test *test = &_post_test_list_start[test_id];
+
+	if (!IS_ENABLED(CONFIG_POST_RUNTIME_TESTS) &&
+	    !(test->flags & POST_FLAG_BOOT_ONLY)) {
+		LOG_WRN("Runtime tests disabled");
+		return POST_RESULT_SKIP;
+	}
+
+	if (!(test->flags & POST_FLAG_RUNTIME_OK) &&
+	    !(test->flags & POST_FLAG_BOOT_ONLY)) {
+		LOG_WRN("Test %u not safe for runtime", test_id);
+		return POST_RESULT_SKIP;
+	}
+
+	return execute_test(test);
 }
 
 int post_run_category(uint32_t category)
@@ -278,12 +298,15 @@ int post_register_failure_hook(post_failure_cb cb, void *user_data)
 
 const struct post_test *post_get_test(uint32_t test_id)
 {
-	STRUCT_SECTION_FOREACH(post_test, test) {
-		if (test->id == test_id) {
-			return test;
-		}
+	extern struct post_test _post_test_list_start[];
+	extern struct post_test _post_test_list_end[];
+	
+	/* Direct array access - O(1) lookup */
+	if (test_id >= (uint32_t)(_post_test_list_end - _post_test_list_start)) {
+		return NULL;
 	}
-	return NULL;
+
+	return &_post_test_list_start[test_id];
 }
 
 int post_get_test_count(void)

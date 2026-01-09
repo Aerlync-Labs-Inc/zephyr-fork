@@ -14,6 +14,13 @@
 #include <zephyr/post/post.h>
 #include <stdlib.h>
 
+/* Helper to compute test ID from test pointer */
+static inline uint32_t post_compute_test_id(const struct post_test *test)
+{
+	extern struct post_test _post_test_list_start[];
+	return (uint32_t)(test - _post_test_list_start);
+}
+
 static int cmd_post_list(const struct shell *sh, size_t argc, char **argv)
 {
 	ARG_UNUSED(argc);
@@ -63,8 +70,9 @@ static int cmd_post_list(const struct shell *sh, size_t argc, char **argv)
 			strcat(flags_str, "DESTR ");
 		}
 
+		uint32_t test_id = post_compute_test_id(test);
 		shell_print(sh, "%04x %-24s %04x     %-12s %-20s",
-			    test->id, test->name, test->category,
+			    test_id, test->name, test->category,
 			    level_str, flags_str);
 	}
 
@@ -84,7 +92,8 @@ static int cmd_post_run(const struct shell *sh, size_t argc, char **argv)
 		shell_print(sh, "Running all runtime-safe tests...");
 		STRUCT_SECTION_FOREACH(post_test, test) {
 			if (test->flags & POST_FLAG_RUNTIME_OK) {
-				enum post_result result = post_run_test(test->id);
+				uint32_t test_id = post_compute_test_id(test);
+				enum post_result result = post_run_test(test_id);
 
 				if (result == POST_RESULT_FAIL ||
 				    result == POST_RESULT_ERROR) {
@@ -189,12 +198,13 @@ static int cmd_post_status(const struct shell *sh, size_t argc, char **argv)
 		shell_print(sh, "\nFailed Tests:");
 		shell_print(sh, "%-4s %-24s %-10s %-10s", "ID", "Name", "ErrCode", "ErrData");
 		STRUCT_SECTION_FOREACH(post_test, test) {
+			uint32_t test_id = post_compute_test_id(test);
 			struct post_result_record record;
-			if (post_get_result(test->id, &record) == 0) {
+			if (post_get_result(test_id, &record) == 0) {
 				if (record.result == POST_RESULT_FAIL || 
 				    record.result == POST_RESULT_ERROR) {
 					shell_error(sh, "%04x %-24s 0x%08x 0x%08x", 
-						    test->id, test->name, 
+						    test_id, test->name, 
 						    record.error_code, record.error_data);
 				}
 			}
@@ -206,10 +216,11 @@ static int cmd_post_status(const struct shell *sh, size_t argc, char **argv)
 	if (skipped > 0) {
 		shell_print(sh, "\nSkipped Tests:");
 		STRUCT_SECTION_FOREACH(post_test, test) {
+			uint32_t test_id = post_compute_test_id(test);
 			struct post_result_record record;
-			if (post_get_result(test->id, &record) == 0 && 
+			if (post_get_result(test_id, &record) == 0 && 
 			    record.result == POST_RESULT_SKIP) {
-				shell_warn(sh, "%04x %-24s", test->id, test->name);
+				shell_warn(sh, "%04x %-24s", test_id, test->name);
 			}
 		}
 	}
@@ -217,10 +228,11 @@ static int cmd_post_status(const struct shell *sh, size_t argc, char **argv)
 	if (passed > 0) {
 		shell_print(sh, "\nPassed Tests:");
 		STRUCT_SECTION_FOREACH(post_test, test) {
+			uint32_t test_id = post_compute_test_id(test);
 			struct post_result_record record;
-			if (post_get_result(test->id, &record) == 0 && 
+			if (post_get_result(test_id, &record) == 0 && 
 			    record.result == POST_RESULT_PASS) {
-				shell_print(sh, "%04x %-24s", test->id, test->name);
+				shell_print(sh, "%04x %-24s", test_id, test->name);
 			}
 		}
 	}
@@ -238,8 +250,9 @@ static int cmd_post_results(const struct shell *sh, size_t argc, char **argv)
 	shell_print(sh, "---- ------------------------ -------- ----------");
 
 	STRUCT_SECTION_FOREACH(post_test, test) {
+		uint32_t test_id = post_compute_test_id(test);
 		struct post_result_record record;
-		int ret = post_get_result(test->id, &record);
+		int ret = post_get_result(test_id, &record);
 		const char *result_str;
 
 		if (ret != 0) {
@@ -266,11 +279,11 @@ static int cmd_post_results(const struct shell *sh, size_t argc, char **argv)
 
 		if (ret == 0) {
 			shell_print(sh, "%04x %-24s %-8s %llu",
-				    test->id, test->name, result_str,
+				    test_id, test->name, result_str,
 				    record.duration_us);
 		} else {
 			shell_print(sh, "%04x %-24s %-8s -",
-				    test->id, test->name, result_str);
+				    test_id, test->name, result_str);
 		}
 	}
 

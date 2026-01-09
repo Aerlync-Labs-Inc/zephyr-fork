@@ -62,7 +62,7 @@ static enum post_result cpu_reg_test_fn(const struct post_context *ctx)
 	return POST_RESULT_PASS;
 }
 
-POST_CPU_TEST(cpu_reg_test, 0x0001, POST_LEVEL_EARLY, cpu_reg_test_fn);
+POST_CPU_TEST(cpu_reg_test, POST_LEVEL_EARLY, cpu_reg_test_fn);
 
 /**
  * @brief Test ALU basic operations
@@ -139,6 +139,6 @@ static enum post_result cpu_alu_test_fn(const struct post_context *ctx)
 	return POST_RESULT_PASS;
 }
 
-POST_TEST_DEFINE(cpu_alu_test, 0x0002, POST_CAT_CPU, POST_LEVEL_PRE_KERNEL_1,
+POST_TEST_DEFINE(cpu_alu_test, POST_CAT_CPU, POST_LEVEL_PRE_KERNEL_1,
 		 5, POST_FLAG_RUNTIME_OK | POST_FLAG_USERSPACE_OK,
 		 cpu_alu_test_fn, "CPU ALU operations test");
