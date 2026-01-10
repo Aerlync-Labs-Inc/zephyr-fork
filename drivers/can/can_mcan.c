@@ -1226,7 +1226,7 @@ void can_mcan_remove_rx_filter(const struct device *dev, int filter_id)
 	struct can_mcan_data *data = dev->data;
 	int err;
 
-	if (filter_id < 0) {
+	if (filter_id < 0 || filter_id >= (cbs->num_std + cbs->num_ext)) {
 		LOG_ERR("filter ID %d out of bounds", filter_id);
 		return;
 	}
@@ -1235,11 +1235,6 @@ void can_mcan_remove_rx_filter(const struct device *dev, int filter_id)
 
 	if (filter_id >= cbs->num_std) {
 		filter_id -= cbs->num_std;
-		if (filter_id >= cbs->num_ext) {
-			LOG_ERR("filter ID %d out of bounds", filter_id);
-			k_mutex_unlock(&data->lock);
-			return;
-		}
 
 		cbs->ext[filter_id].function = NULL;
 		cbs->ext[filter_id].user_data = NULL;
@@ -1466,6 +1461,23 @@ int can_mcan_init(const struct device *dev)
 		 CAN_MCAN_CCCR_ASM);
 
 	err = can_mcan_write_reg(dev, CAN_MCAN_CCCR, reg);
+	if (err != 0) {
+		return err;
+	}
+
+#ifdef CONFIG_CAN_RX_TIMESTAMP
+	/*
+	 * Enable the internal timestamp counter by default. SoC-specific driver frontends can
+	 * overwrite this if configured for using a SoC-specific, external timestamp counter.
+	 */
+	reg = FIELD_PREP(CAN_MCAN_TSCC_TCP, config->timestamp_prescaler - 1U) |
+		FIELD_PREP(CAN_MCAN_TSCC_TSS, 1U);
+#else /* CONFIG_CAN_RX_TIMESTAMP */
+	/* Disable timestamp counter */
+	reg = 0U;
+#endif /* !CONFIG_CAN_RX_TIMESTAMP */
+
+	err = can_mcan_write_reg(dev, CAN_MCAN_TSCC, reg);
 	if (err != 0) {
 		return err;
 	}
