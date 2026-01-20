@@ -70,6 +70,8 @@ enum post_category {
 	POST_CAT_COMM = BIT(7),
 	/** ADC tests */
 	POST_CAT_ADC = BIT(8),
+	/** UART loop back tests */
+	POST_CAT_UART_LOOPBACK = BIT(9),
 	/** User-defined tests */
 	POST_CAT_CUSTOM = BIT(15),
 };
