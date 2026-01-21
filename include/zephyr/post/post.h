@@ -72,6 +72,8 @@ enum post_category {
 	POST_CAT_ADC = BIT(8),
 	/** UART loop back tests */
 	POST_CAT_UART_LOOPBACK = BIT(9),
+	/** Save Start-Up registers tests */
+	POST_CAT_SAVE_STARTUP_REG = BIT(10),
 	/** User-defined tests */
 	POST_CAT_CUSTOM = BIT(15),
 };

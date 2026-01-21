@@ -67,44 +67,6 @@ config POST_LOG_LEVEL
 	  Log level for POST subsystem.
 	  0 = off, 1 = error, 2 = warning, 3 = info, 4 = debug
 
-menu "Built-in Tests"
-
-config POST_CPU_TESTS
-	bool "Built-in CPU tests"
-	default y
-	help
-	  Include CPU register and instruction tests. These tests
-	  verify correct operation of CPU registers and ALU.
-
-config POST_RAM_TESTS
-	bool "Built-in RAM tests"
-	default y
-	help
-	  Include RAM pattern tests (March C-, checkerboard).
-	  Warning: These tests are destructive and only run at boot.
-
-config POST_STACK_TESTS
-	bool "Built-in stack tests"
-	default y
-	help
-	  Include stack integrity verification tests. These check
-	  stack canaries and stack usage.
-
-config POST_FLASH_TESTS
-	bool "Built-in Flash/ROM tests"
-	default n
-	help
-	  Include Flash CRC verification tests. Requires a golden
-	  CRC value to be stored in flash.
-
-config POST_CLOCK_TESTS
-	bool "Built-in clock tests"
-	default n
-	help
-	  Include system clock frequency verification tests.
-
-endmenu # Built-in Tests
-
 config POST_MAX_FAILURE_HOOKS
 	int "Maximum number of failure hooks"
 	default 4
