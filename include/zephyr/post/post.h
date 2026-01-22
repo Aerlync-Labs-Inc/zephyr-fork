@@ -78,6 +78,12 @@ enum post_category {
 	POST_CAT_DMA = BIT(11),
 	/** Interrupt tests */
 	POST_CAT_INTERRUPT = BIT(12),
+	/** Counter test */
+	POST_CAT_COUNTER = BIT(9),
+	/** PWM test */
+	POST_CAT_PWM = BIT(10),
+	/** PWM_Gatekill test */
+	POST_CAT_PWM_GATEKILL = BIT(13),
 	/** User-defined tests */
 	POST_CAT_CUSTOM = BIT(15),
 };
