@@ -84,8 +84,10 @@ enum post_category {
 	POST_CAT_PWM = BIT(10),
 	/** PWM_Gatekill test */
 	POST_CAT_PWM_GATEKILL = BIT(13),
+	/** UART communication tests */
+	POST_CAT_COMMUNICATION = BIT(15),
 	/** User-defined tests */
-	POST_CAT_CUSTOM = BIT(15),
+	POST_CAT_CUSTOM = BIT(16),
 };
 
 /**
